@@ -6,6 +6,8 @@
 
 <p align="center"><strong>Screen recording that never leaves your device.</strong></p>
 
+<p align="center"><a href="https://offrec-one.vercel.app"><strong>Try it: offrec-one.vercel.app</strong></a></p>
+
 Offrec is a free, open-source screen recorder that runs entirely in your browser. Pick a window, a tab or your whole screen, add your camera in any corner, record, then save the video straight to your computer. No account, no uploads, no tracking.
 
 ## Features
