@@ -26,7 +26,7 @@ export function IdleScreen({ mode, selecting, message, onMode, onStart, onDismis
       ? pipSupported
         ? 'Floating Pause and Stop controls stay on top of your other windows, and never show up in the video.'
         : 'Pick the window or tab you want to record. To finish, use the Stop sharing bar or come back here.'
-      : 'Floating controls are turned off, so nothing extra shows up in the video. To pause or stop, come back to this tab.';
+      : "Your browser's picker opens on its Entire screen tab. Floating controls stay off so nothing extra shows up in the video. To pause or stop, come back to this tab.";
 
   return (
     <main className="idle">

@@ -8,7 +8,7 @@ import {
   type Corner,
   type Overlay,
 } from '../lib/overlay';
-import { fileSaveSupported, type MessageKey } from '../state';
+import { fileSaveSupported, type CaptureMode, type MessageKey } from '../state';
 import { formatTime } from '../lib/format';
 import {
   CameraIcon,
@@ -36,6 +36,8 @@ const CORNER_LABEL: Record<Corner, string> = {
 
 interface StudioProps {
   phase: 'READY' | 'COUNTDOWN' | 'RECORDING' | 'PAUSED';
+  /** What the user chose on the start screen (the browser may have granted something else). */
+  mode: CaptureMode;
   canvas: HTMLCanvasElement;
   canvasW: number;
   canvasH: number;
@@ -331,7 +333,19 @@ function Notices(props: StudioProps) {
     lines.push("Microphone not available, so only the shared tab's audio will be recorded.");
   }
   if (phase === 'READY') {
-    if (surface === 'monitor' || surface === 'unknown') {
+    const picked = surface === 'browser' ? 'a tab' : 'a window';
+    if (props.mode === 'screen' && (surface === 'window' || surface === 'browser')) {
+      // Asked for the entire screen, but the user chose something smaller in the browser's picker.
+      lines.push(
+        floating
+          ? `You're sharing ${picked} instead of your entire screen. Only that will be recorded, and floating Pause and Stop controls are on.`
+          : `You're sharing ${picked} instead of your entire screen. Only that will be recorded.`,
+      );
+    } else if (props.mode === 'window' && surface === 'monitor') {
+      lines.push(
+        "You're sharing your entire screen, so floating controls are off to keep them out of the video. To pause or stop, come back to this tab.",
+      );
+    } else if (surface === 'monitor' || surface === 'unknown') {
       lines.push("Floating controls are off so they don't show up in your video. To pause or stop, come back to this tab.");
     } else if (!floating) {
       lines.push("To finish, use your browser's Stop sharing bar, or come back to this tab to pause.");

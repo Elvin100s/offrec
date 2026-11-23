@@ -551,6 +551,7 @@ export default function App() {
         <Studio
           key={state.sessionId}
           phase={phase}
+          mode={state.mode}
           canvas={session.canvas}
           canvasW={state.canvasW}
           canvasH={state.canvasH}
