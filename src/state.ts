@@ -1,7 +1,10 @@
 import type { CameraFailure, MicStatus, Surface } from './engine/Session';
 import { DEFAULT_CORNER, DEFAULT_W, type Corner, type Overlay } from './lib/overlay';
 
-export type Phase = 'IDLE' | 'SELECTING' | 'READY' | 'RECORDING' | 'PAUSED' | 'REVIEW';
+export type Phase = 'IDLE' | 'SELECTING' | 'READY' | 'COUNTDOWN' | 'RECORDING' | 'PAUSED' | 'REVIEW';
+
+/** Seconds counted down between pressing Record and the recording starting. */
+export const COUNTDOWN_SECONDS = 3;
 export type CaptureMode = 'window' | 'screen';
 export type MessageKey = 'unsupported' | 'insecure' | 'blocked' | 'start-failed' | 'mime' | 'recorder-start';
 
@@ -41,6 +44,7 @@ export interface AppState {
   title: string;
   reviewTitle: string;
   elapsedSec: number;
+  countdown: number;
   message: MessageKey | null;
   review: ReviewInfo | null;
   stoppedFromPip: boolean;
@@ -70,6 +74,8 @@ export type Action =
   | { type: 'overlay'; overlay: Overlay; corner: Corner | null; animate: boolean }
   | { type: 'title'; title: string }
   | { type: 'reviewTitle'; title: string }
+  | { type: 'countdown'; secondsLeft: number }
+  | { type: 'countdownCancelled' }
   | { type: 'recording' }
   | { type: 'paused' }
   | { type: 'resumed' }
@@ -101,13 +107,15 @@ export function initialState(): AppState {
     title: '',
     reviewTitle: 'recording',
     elapsedSec: 0,
+    countdown: COUNTDOWN_SECONDS,
     message: null,
     review: null,
     stoppedFromPip: false,
   };
 }
 
-const isLive = (phase: Phase) => phase === 'READY' || phase === 'RECORDING' || phase === 'PAUSED';
+export const isLive = (phase: Phase) =>
+  phase === 'READY' || phase === 'COUNTDOWN' || phase === 'RECORDING' || phase === 'PAUSED';
 
 /** Every transition is guarded: actions that don't fit the current state are ignored. */
 export function reducer(s: AppState, a: Action): AppState {
@@ -188,8 +196,16 @@ export function reducer(s: AppState, a: Action): AppState {
     case 'reviewTitle':
       return s.state === 'REVIEW' ? { ...s, reviewTitle: a.title } : s;
 
+    case 'countdown':
+      if (s.state !== 'READY' && s.state !== 'COUNTDOWN') return s;
+      return { ...s, state: 'COUNTDOWN', countdown: a.secondsLeft, message: null };
+
+    case 'countdownCancelled':
+      return s.state === 'COUNTDOWN' ? { ...s, state: 'READY', countdown: COUNTDOWN_SECONDS } : s;
+
     case 'recording':
-      return s.state === 'READY' ? { ...s, state: 'RECORDING', elapsedSec: 0, message: null } : s;
+      if (s.state !== 'COUNTDOWN') return s;
+      return { ...s, state: 'RECORDING', elapsedSec: 0, countdown: COUNTDOWN_SECONDS, message: null };
 
     case 'paused':
       return s.state === 'RECORDING' ? { ...s, state: 'PAUSED' } : s;
@@ -217,7 +233,16 @@ export function reducer(s: AppState, a: Action): AppState {
 
     case 'reset':
       if (s.state === 'IDLE') return s;
-      return { ...s, state: 'IDLE', review: null, camOn: false, camPending: false, elapsedSec: 0, stoppedFromPip: false };
+      return {
+        ...s,
+        state: 'IDLE',
+        review: null,
+        camOn: false,
+        camPending: false,
+        elapsedSec: 0,
+        countdown: COUNTDOWN_SECONDS,
+        stoppedFromPip: false,
+      };
 
     case 'message':
       return { ...s, message: a.message };

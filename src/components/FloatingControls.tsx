@@ -7,6 +7,8 @@ import { LogoMark } from './Logo';
 interface FloatingControlsProps {
   phase: Phase;
   elapsedSec: number;
+  countdown: number;
+  onCancelCountdown: () => void;
   micOn: boolean;
   micStatus: MicStatus;
   onToggleMic: () => void;
@@ -27,6 +29,21 @@ export function FloatingControls(props: FloatingControlsProps) {
         <span className="spacer" />
         <button type="button" className="btn btn-accent" onClick={props.onOpenRecorder}>
           Open recorder
+        </button>
+      </div>
+    );
+  }
+
+  if (phase === 'COUNTDOWN') {
+    return (
+      <div className="pip-bar">
+        <span key={props.countdown} className="pip-count" role="status" aria-live="assertive">
+          {props.countdown}
+        </span>
+        <span className="pip-ready">Recording starts in {props.countdown}…</span>
+        <span className="spacer" />
+        <button type="button" className="btn btn-secondary" onClick={props.onCancelCountdown}>
+          Cancel
         </button>
       </div>
     );

@@ -1022,3 +1022,79 @@ html.pip-doc,
     transition: none !important;
   }
 }
+
+/* ---------- Countdown ---------- */
+
+.app[data-phase='countdown'] {
+  --glow: var(--glow-rec);
+}
+
+.app[data-phase='countdown'] .stage {
+  border-color: rgba(255, 77, 94, 0.45);
+}
+
+.countdown {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(7, 8, 11, 0.45);
+  pointer-events: none;
+}
+
+.countdown-num {
+  width: clamp(110px, 22%, 200px);
+  aspect-ratio: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: rgba(22, 24, 32, 0.72);
+  border: 1px solid rgba(255, 77, 94, 0.55);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  box-shadow:
+    0 0 0 6px rgba(255, 77, 94, 0.12),
+    0 0 80px rgba(255, 77, 94, 0.45);
+  color: #f2f3f7;
+  font-size: clamp(56px, 9vw, 104px);
+  font-weight: 800;
+  letter-spacing: -0.04em;
+  font-variant-numeric: tabular-nums;
+  animation: count-pop 1s var(--ease-out);
+}
+
+@keyframes count-pop {
+  0% {
+    transform: scale(1.35);
+    opacity: 0;
+  }
+  25% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  85% {
+    opacity: 1;
+  }
+  100% {
+    transform: scale(0.92);
+    opacity: 0.6;
+  }
+}
+
+.pip-count {
+  flex: none;
+  width: 44px;
+  height: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: var(--accent);
+  color: var(--on-accent);
+  font-size: 22px;
+  font-weight: 800;
+  box-shadow: 0 0 18px rgba(255, 77, 94, 0.6);
+  animation: count-pop 1s var(--ease-out);
+}

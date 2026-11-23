@@ -118,6 +118,13 @@ export class Session {
   private failed = false;
   private stopPromise: Promise<RecordingResult> | null = null;
 
+  private countdown: {
+    end: number;
+    last: number;
+    onCount: (secondsLeft: number) => void;
+    onDone: (result: StartResult) => void;
+  } | null = null;
+
   private accumulatedMs = 0;
   private segmentStart = 0;
   private running = false;
@@ -190,6 +197,7 @@ export class Session {
 
   private draw() {
     if (this.disposed) return;
+    this.tickCountdown();
     this.emitSecond();
 
     const video = this.screenVideo;
@@ -377,6 +385,37 @@ export class Session {
 
   // ---------- Recording ----------
 
+  /**
+   * Starts recording after a countdown. The countdown runs on the worker ticks,
+   * so it stays on time even when this tab is in the background.
+   */
+  startAfter(ms: number, onCount: (secondsLeft: number) => void, onDone: (result: StartResult) => void): boolean {
+    if (this.disposed || this.recorder || this.countdown) return false;
+    this.countdown = { end: performance.now() + ms, last: -1, onCount, onDone };
+    this.tickCountdown();
+    return true;
+  }
+
+  cancelCountdown() {
+    this.countdown = null;
+  }
+
+  private tickCountdown() {
+    const c = this.countdown;
+    if (!c) return;
+    const remaining = c.end - performance.now();
+    if (remaining <= 0) {
+      this.countdown = null;
+      c.onDone(this.start());
+      return;
+    }
+    const secondsLeft = Math.ceil(remaining / 1000);
+    if (secondsLeft !== c.last) {
+      c.last = secondsLeft;
+      c.onCount(secondsLeft);
+    }
+  }
+
   start(): StartResult {
     if (this.disposed || this.recorder) return 'error';
     const mime = pickMime();
@@ -476,6 +515,7 @@ export class Session {
   dispose() {
     if (this.disposed) return;
     this.disposed = true;
+    this.countdown = null;
 
     this.worker?.terminate();
     this.worker = null;

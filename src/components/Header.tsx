@@ -6,6 +6,7 @@ import { Wordmark } from './Logo';
 interface HeaderProps {
   phase: Phase;
   surface: Surface;
+  countdown: number;
   saved: boolean;
   canPopOut: boolean;
   onPopOut: () => void;
@@ -18,8 +19,15 @@ const SURFACE_LABEL: Record<Surface, string> = {
   unknown: 'sharing your screen',
 };
 
-function Status({ phase, surface, saved }: Omit<HeaderProps, 'canPopOut' | 'onPopOut'>) {
+function Status({ phase, surface, countdown, saved }: Omit<HeaderProps, 'canPopOut' | 'onPopOut'>) {
   switch (phase) {
+    case 'COUNTDOWN':
+      return (
+        <span className="pill">
+          <span className="dot dot-rec" />
+          Starting in {countdown}
+        </span>
+      );
     case 'READY':
       return (
         <span className="pill">
@@ -53,12 +61,12 @@ function Status({ phase, surface, saved }: Omit<HeaderProps, 'canPopOut' | 'onPo
   }
 }
 
-export function Header({ phase, surface, saved, canPopOut, onPopOut }: HeaderProps) {
+export function Header({ phase, surface, countdown, saved, canPopOut, onPopOut }: HeaderProps) {
   return (
     <header className="header">
       <Wordmark />
       <div className="header-right">
-        <Status phase={phase} surface={surface} saved={saved} />
+        <Status phase={phase} surface={surface} countdown={countdown} saved={saved} />
         {canPopOut ? (
           <button
             type="button"

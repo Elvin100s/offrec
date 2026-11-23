@@ -35,7 +35,7 @@ const CORNER_LABEL: Record<Corner, string> = {
 };
 
 interface StudioProps {
-  phase: 'READY' | 'RECORDING' | 'PAUSED';
+  phase: 'READY' | 'COUNTDOWN' | 'RECORDING' | 'PAUSED';
   canvas: HTMLCanvasElement;
   canvasW: number;
   canvasH: number;
@@ -52,7 +52,9 @@ interface StudioProps {
   animateOverlay: boolean;
   title: string;
   elapsedSec: number;
+  countdown: number;
   message: MessageKey | null;
+  onCancelCountdown: () => void;
   onToggleCam: () => void;
   onToggleMic: () => void;
   onCorner: (corner: Corner) => void;
@@ -129,7 +131,7 @@ export function Studio(props: StudioProps) {
 
   const ratio = canvasW / canvasH;
   const boxHeight = heightFraction(overlay.w, canvasW, canvasH, camAspect);
-  const recording = phase !== 'READY';
+  const recording = phase === 'RECORDING' || phase === 'PAUSED';
 
   return (
     <>
@@ -171,6 +173,14 @@ export function Studio(props: StudioProps) {
                   title="Drag to resize"
                 />
               ))}
+            </div>
+          ) : null}
+          {phase === 'COUNTDOWN' ? (
+            <div className="countdown" role="status" aria-live="assertive">
+              <span className="sr-only">Recording starts in</span>
+              <span key={props.countdown} className="countdown-num">
+                {props.countdown}
+              </span>
             </div>
           ) : null}
           {recording ? (
@@ -266,6 +276,16 @@ export function Studio(props: StudioProps) {
               <RecordIcon />
               Record
             </button>
+          ) : phase === 'COUNTDOWN' ? (
+            <button
+              type="button"
+              className="btn btn-secondary"
+              onClick={props.onCancelCountdown}
+              title="Cancel before recording starts (Esc)"
+            >
+              <CloseIcon size={16} />
+              Cancel · {props.countdown}
+            </button>
           ) : (
             <>
               <button
@@ -311,6 +331,10 @@ function Notices(props: StudioProps) {
       lines.push('When you press Record, a small Pause and Stop window stays on top of your other windows.');
     }
     if (camOn) lines.push('Snap the camera to a corner, or drag it anywhere. Drag a corner handle to resize.');
+  } else if (phase === 'COUNTDOWN') {
+    lines.push(
+      `Recording starts in ${props.countdown}. Switch to what you want to record now. The countdown is not part of the video.`,
+    );
   } else if (phase === 'RECORDING') {
     lines.push('Recording keeps going while you work in other windows.');
   } else {

@@ -4,7 +4,7 @@ import { Session, type Surface } from './engine/Session';
 import { pickMime } from './engine/mime';
 import { clampOverlay, cornerOverlay, DEFAULT_CORNER, type Corner, type Overlay } from './lib/overlay';
 import { sanitizeFilename } from './lib/filename';
-import { initialState, reducer, type CaptureMode, type Phase } from './state';
+import { COUNTDOWN_SECONDS, initialState, isLive, reducer, type CaptureMode } from './state';
 import { Header } from './components/Header';
 import { IdleScreen } from './components/IdleScreen';
 import { Studio } from './components/Studio';
@@ -15,8 +15,6 @@ const pipSupported = typeof window !== 'undefined' && 'documentPictureInPicture'
 
 /** Floating controls are only allowed when they can't end up in the video. */
 const canFloat = (surface: Surface) => pipSupported && (surface === 'window' || surface === 'browser');
-
-const isLive = (phase: Phase) => phase === 'READY' || phase === 'RECORDING' || phase === 'PAUSED';
 
 function displayOptions(mode: CaptureMode): DisplayMediaStreamOptions {
   const options: Record<string, unknown> =
@@ -256,7 +254,7 @@ export default function App() {
               const phase = stateRef.current.state;
               if (phase === 'RECORDING' || phase === 'PAUSED') {
                 finish(pipRef.current !== null);
-              } else if (phase === 'READY') {
+              } else if (phase === 'READY' || phase === 'COUNTDOWN') {
                 teardownSession();
                 closePip();
                 dispatch({ type: 'reset' });
@@ -319,16 +317,34 @@ export default function App() {
       dispatch({ type: 'message', message: 'mime' });
       return;
     }
-    // Open the floating window inside this same gesture.
+    // Open the floating window inside this same gesture, so it is there during the countdown.
     if (canFloat(session.surface)) openPip();
-    const result = session.start();
-    if (result !== 'ok') {
-      closePip();
-      dispatch({ type: 'message', message: result === 'mime' ? 'mime' : 'recorder-start' });
-      return;
-    }
-    dispatch({ type: 'recording' });
+    const started = session.startAfter(
+      COUNTDOWN_SECONDS * 1000,
+      (secondsLeft) => {
+        if (sessionRef.current === session) dispatch({ type: 'countdown', secondsLeft });
+      },
+      (result) => {
+        if (sessionRef.current !== session) return;
+        if (result === 'ok') {
+          dispatch({ type: 'recording' });
+          return;
+        }
+        closePip();
+        dispatch({ type: 'countdownCancelled' });
+        dispatch({ type: 'message', message: result === 'mime' ? 'mime' : 'recorder-start' });
+      },
+    );
+    if (!started) closePip();
   }, [closePip, openPip]);
+
+  const cancelCountdown = useCallback(() => {
+    const session = sessionRef.current;
+    if (!session || stateRef.current.state !== 'COUNTDOWN') return;
+    session.cancelCountdown();
+    closePip();
+    dispatch({ type: 'countdownCancelled' });
+  }, [closePip]);
 
   const togglePause = useCallback(() => {
     const session = sessionRef.current;
@@ -420,10 +436,16 @@ export default function App() {
       const target = event.target instanceof Element ? event.target : null;
       if (target?.closest('input, textarea, select, [contenteditable=""], [contenteditable="true"]')) return;
       const phase = stateRef.current.state;
-      if (event.code === 'Space') {
+      if (event.key === 'Escape' && phase === 'COUNTDOWN') {
+        event.preventDefault();
+        cancelCountdown();
+      } else if (event.code === 'Space') {
         // A focused button already reacts to Space on its own.
         if (target?.closest('button, a, [role="radio"]')) return;
-        if (phase === 'READY') {
+        if (phase === 'COUNTDOWN') {
+          event.preventDefault();
+          cancelCountdown();
+        } else if (phase === 'READY') {
           event.preventDefault();
           record();
         } else if (phase === 'RECORDING' || phase === 'PAUSED') {
@@ -438,7 +460,7 @@ export default function App() {
     };
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
-  }, [record, togglePause, toggleCamera, toggleMic]);
+  }, [cancelCountdown, record, togglePause, toggleCamera, toggleMic]);
 
   // ---------- Render ----------
 
@@ -451,6 +473,7 @@ export default function App() {
       <Header
         phase={phase}
         surface={state.surface}
+        countdown={state.countdown}
         saved={state.review?.saved ?? false}
         canPopOut={canPopOut}
         onPopOut={openPip}
@@ -467,7 +490,7 @@ export default function App() {
         />
       ) : null}
 
-      {(phase === 'READY' || phase === 'RECORDING' || phase === 'PAUSED') && session ? (
+      {(phase === 'READY' || phase === 'COUNTDOWN' || phase === 'RECORDING' || phase === 'PAUSED') && session ? (
         <Studio
           key={state.sessionId}
           phase={phase}
@@ -487,7 +510,9 @@ export default function App() {
           animateOverlay={state.animateOverlay}
           title={state.title}
           elapsedSec={state.elapsedSec}
+          countdown={state.countdown}
           message={state.message}
+          onCancelCountdown={cancelCountdown}
           onToggleCam={toggleCamera}
           onToggleMic={toggleMic}
           onCorner={setCorner}
@@ -517,6 +542,8 @@ export default function App() {
             <FloatingControls
               phase={phase}
               elapsedSec={state.elapsedSec}
+              countdown={state.countdown}
+              onCancelCountdown={cancelCountdown}
               micOn={state.micOn}
               micStatus={state.micStatus}
               onToggleMic={toggleMic}

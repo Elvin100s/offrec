@@ -15,9 +15,10 @@ Offrec is a free, open-source screen recorder that runs entirely in your browser
 - **Record a window, a tab or your entire screen**, with sound from your microphone and from the shared tab.
 - **Camera overlay** on top of your screen. Snap it to any corner or drag it anywhere, and resize it from its corners.
 - **Floating Pause and Stop controls** (Chrome and Edge) that stay on top of the app you are recording, and never appear in the video.
+- **3-second countdown** after you press Record, so you can switch to what you want to record. Cancel it with <kbd>Esc</kbd>.
 - **Pause and resume** without gaps in the video.
 - **Review before saving**: watch the recording, name it, save it as many times as you like.
-- **Keyboard shortcuts**: <kbd>Space</kbd> record / pause, <kbd>M</kbd> microphone, <kbd>C</kbd> camera.
+- **Keyboard shortcuts**: <kbd>Space</kbd> record / pause, <kbd>Esc</kbd> cancel the countdown, <kbd>M</kbd> microphone, <kbd>C</kbd> camera.
 - Dark and light themes that follow your system, and reduced motion support.
 
 ## Privacy
