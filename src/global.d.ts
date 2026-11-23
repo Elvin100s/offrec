@@ -11,6 +11,15 @@ interface DocumentPictureInPicture extends EventTarget {
   readonly window: Window | null;
 }
 
+interface SaveFilePickerOptions {
+  suggestedName?: string;
+  id?: string;
+  startIn?: string;
+  types?: { description?: string; accept: Record<string, string[]> }[];
+}
+
 interface Window {
   documentPictureInPicture?: DocumentPictureInPicture;
+  /** File System Access API (Chrome, Edge). */
+  showSaveFilePicker?: (options?: SaveFilePickerOptions) => Promise<FileSystemFileHandle>;
 }

@@ -64,15 +64,23 @@ export function ReviewScreen({ review, title, onTitle, onSave, onRecordAnother, 
                 if (e.key === 'Enter' && !empty) onSave();
               }}
             />
-            <p className="field-hint">
-              Saves as <span className="filename">{filename}</span> · {formatTime(review.durationMs / 1000)} ·{' '}
-              {formatBytes(review.size)}
-            </p>
+            {review.savedTo && !empty ? (
+              <p className="field-hint saved-to">
+                <span className="dot dot-ok" /> Already saved as <span className="filename">{review.savedTo}</span>{' '}
+                · {formatTime(review.durationMs / 1000)} · {formatBytes(review.size)}. Save a copy as{' '}
+                <span className="filename">{filename}</span> if you like.
+              </p>
+            ) : (
+              <p className="field-hint">
+                Saves as <span className="filename">{filename}</span> · {formatTime(review.durationMs / 1000)} ·{' '}
+                {formatBytes(review.size)}
+              </p>
+            )}
           </div>
           <div className="review-actions">
             <button type="button" className="btn btn-accent btn-large" onClick={onSave} disabled={empty}>
               <DownloadIcon size={18} />
-              {review.saved ? 'Save again' : 'Save video'}
+              {review.savedTo ? 'Save a copy' : review.saved ? 'Save again' : 'Save video'}
             </button>
             <button type="button" className="btn btn-secondary btn-large" onClick={recordAnother}>
               <RecordIcon />
@@ -97,7 +105,9 @@ export function ReviewScreen({ review, title, onTitle, onSave, onRecordAnother, 
                 {confirm === 'discard' ? 'Discard this recording?' : 'Start a new recording?'}
               </p>
               <p className="confirm-body">
-                {review.saved
+                {review.savedTo
+                  ? `${review.savedTo} stays on your computer. This only clears it from Offrec.`
+                  : review.saved
                   ? 'The saved file stays on your computer. This copy will be cleared.'
                   : "This recording hasn't been saved and can't be recovered."}
               </p>
@@ -119,7 +129,11 @@ export function ReviewScreen({ review, title, onTitle, onSave, onRecordAnother, 
           </div>
         ) : null}
 
-        <p className="review-foot">The file stays on this computer. You can rename it and save again.</p>
+        <p className="review-foot">
+          {review.savedTo
+            ? 'Your recording is already on this computer. Nothing was uploaded.'
+            : 'The file stays on this computer. You can rename it and save again.'}
+        </p>
       </div>
     </main>
   );

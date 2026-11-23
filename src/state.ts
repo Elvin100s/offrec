@@ -5,6 +5,9 @@ export type Phase = 'IDLE' | 'SELECTING' | 'READY' | 'COUNTDOWN' | 'RECORDING' |
 
 /** Seconds counted down between pressing Record and the recording starting. */
 export const COUNTDOWN_SECONDS = 3;
+
+/** Chrome and Edge can write the recording to a file while it records. */
+export const fileSaveSupported = typeof window !== 'undefined' && typeof window.showSaveFilePicker === 'function';
 export type CaptureMode = 'window' | 'screen';
 export type MessageKey = 'unsupported' | 'insecure' | 'blocked' | 'start-failed' | 'mime' | 'recorder-start';
 
@@ -16,6 +19,8 @@ export interface ReviewInfo {
   saved: boolean;
   /** The recorder errored mid-way; the video holds what was captured. */
   failed: boolean;
+  /** File name the recording was written to while recording, if any. */
+  savedTo: string | null;
 }
 
 export interface AppState {
@@ -45,6 +50,12 @@ export interface AppState {
   reviewTitle: string;
   elapsedSec: number;
   countdown: number;
+  /** Write the recording to a file while recording (Chrome / Edge). */
+  saveToFile: boolean;
+  /** The save dialog is open. */
+  choosingFile: boolean;
+  /** File currently being written, during the countdown and recording. */
+  savingTo: string | null;
   message: MessageKey | null;
   review: ReviewInfo | null;
   stoppedFromPip: boolean;
@@ -74,6 +85,9 @@ export type Action =
   | { type: 'overlay'; overlay: Overlay; corner: Corner | null; animate: boolean }
   | { type: 'title'; title: string }
   | { type: 'reviewTitle'; title: string }
+  | { type: 'setSaveToFile'; on: boolean }
+  | { type: 'choosingFile'; on: boolean }
+  | { type: 'savingTo'; name: string | null }
   | { type: 'countdown'; secondsLeft: number }
   | { type: 'countdownCancelled' }
   | { type: 'recording' }
@@ -108,6 +122,9 @@ export function initialState(): AppState {
     reviewTitle: 'recording',
     elapsedSec: 0,
     countdown: COUNTDOWN_SECONDS,
+    saveToFile: fileSaveSupported,
+    choosingFile: false,
+    savingTo: null,
     message: null,
     review: null,
     stoppedFromPip: false,
@@ -151,6 +168,8 @@ export function reducer(s: AppState, a: Action): AppState {
         camError: null,
         micStatus: 'pending',
         elapsedSec: 0,
+        choosingFile: false,
+        savingTo: null,
         message: null,
       };
 
@@ -196,12 +215,21 @@ export function reducer(s: AppState, a: Action): AppState {
     case 'reviewTitle':
       return s.state === 'REVIEW' ? { ...s, reviewTitle: a.title } : s;
 
+    case 'setSaveToFile':
+      return s.state === 'READY' && fileSaveSupported ? { ...s, saveToFile: a.on } : s;
+
+    case 'choosingFile':
+      return s.state === 'READY' ? { ...s, choosingFile: a.on } : { ...s, choosingFile: false };
+
+    case 'savingTo':
+      return isLive(s.state) ? { ...s, savingTo: a.name } : s;
+
     case 'countdown':
       if (s.state !== 'READY' && s.state !== 'COUNTDOWN') return s;
-      return { ...s, state: 'COUNTDOWN', countdown: a.secondsLeft, message: null };
+      return { ...s, state: 'COUNTDOWN', countdown: a.secondsLeft, choosingFile: false, message: null };
 
     case 'countdownCancelled':
-      return s.state === 'COUNTDOWN' ? { ...s, state: 'READY', countdown: COUNTDOWN_SECONDS } : s;
+      return s.state === 'COUNTDOWN' ? { ...s, state: 'READY', countdown: COUNTDOWN_SECONDS, savingTo: null } : s;
 
     case 'recording':
       if (s.state !== 'COUNTDOWN') return s;
@@ -226,6 +254,7 @@ export function reducer(s: AppState, a: Action): AppState {
         stoppedFromPip: a.fromPip,
         camOn: false,
         camPending: false,
+        savingTo: null,
       };
 
     case 'saved':
@@ -241,6 +270,8 @@ export function reducer(s: AppState, a: Action): AppState {
         camPending: false,
         elapsedSec: 0,
         countdown: COUNTDOWN_SECONDS,
+        choosingFile: false,
+        savingTo: null,
         stoppedFromPip: false,
       };
 

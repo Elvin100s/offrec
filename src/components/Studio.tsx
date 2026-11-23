@@ -8,7 +8,7 @@ import {
   type Corner,
   type Overlay,
 } from '../lib/overlay';
-import type { MessageKey } from '../state';
+import { fileSaveSupported, type MessageKey } from '../state';
 import { formatTime } from '../lib/format';
 import {
   CameraIcon,
@@ -53,6 +53,10 @@ interface StudioProps {
   title: string;
   elapsedSec: number;
   countdown: number;
+  saveToFile: boolean;
+  choosingFile: boolean;
+  savingTo: string | null;
+  onSaveToFile: (on: boolean) => void;
   message: MessageKey | null;
   onCancelCountdown: () => void;
   onToggleCam: () => void;
@@ -270,11 +274,11 @@ export function Studio(props: StudioProps) {
               type="button"
               className="btn btn-accent"
               onClick={props.onRecord}
-              title="Start recording (Space)"
-              disabled={props.message === 'mime'}
+              title={props.saveToFile ? 'Choose where to save, then start recording (Space)' : 'Start recording (Space)'}
+              disabled={props.message === 'mime' || props.choosingFile}
             >
               <RecordIcon />
-              Record
+              {props.choosingFile ? 'Choose where to save…' : 'Record'}
             </button>
           ) : phase === 'COUNTDOWN' ? (
             <button
@@ -341,8 +345,25 @@ function Notices(props: StudioProps) {
     lines.push('Paused. The pause will not appear in the video.');
   }
 
+  if (props.savingTo && phase !== 'READY') {
+    lines.unshift(`Saving to ${props.savingTo} as you record.`);
+  }
+
   return (
     <div className="notices" aria-live="polite">
+      {phase === 'READY' && fileSaveSupported ? (
+        <label className="file-toggle">
+          <input
+            type="checkbox"
+            checked={props.saveToFile}
+            disabled={props.choosingFile}
+            onChange={(e) => props.onSaveToFile(e.target.checked)}
+          />
+          <span>
+            Save to a file while recording <span className="file-toggle-hint">· safest for long recordings</span>
+          </span>
+        </label>
+      ) : null}
       {camError ? (
         <p className="notice notice-warn">
           <span>

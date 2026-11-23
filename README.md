@@ -16,6 +16,7 @@ Offrec is a free, open-source screen recorder that runs entirely in your browser
 - **Camera overlay** on top of your screen. Snap it to any corner or drag it anywhere, and resize it from its corners.
 - **Floating Pause and Stop controls** (Chrome and Edge) that stay on top of the app you are recording, and never appear in the video.
 - **3-second countdown** after you press Record, so you can switch to what you want to record. Cancel it with <kbd>Esc</kbd>.
+- **Save to a file while recording** (Chrome and Edge, on by default): you pick where to save when you press Record, and the video is written to disk every second, so long recordings don't fill up memory.
 - **Pause and resume** without gaps in the video.
 - **Review before saving**: watch the recording, name it, save it as many times as you like.
 - **Keyboard shortcuts**: <kbd>Space</kbd> record / pause, <kbd>Esc</kbd> cancel the countdown, <kbd>M</kbd> microphone, <kbd>C</kbd> camera.
@@ -80,11 +81,18 @@ src/
   lib/                   overlay geometry, file names, formatting
 ```
 
+## How long can I record?
+
+There is no time limit. Video is capped at 5 Mbps, so a recording takes at most about 38 MB per minute (about 2.3 GB per hour); still screens like slides or code are usually much smaller.
+
+- **Chrome and Edge with "Save to a file while recording"** (the default): the video goes straight to disk, so the length is limited only by free disk space. If the browser crashes mid-recording, what was captured is left next to your chosen file as `name.webm.crswap`; rename it to `name.webm` to recover it.
+- **Firefox, or with that option off**: the recording is kept in memory until you save it. Up to about an hour is comfortable; longer depends on your computer's memory, and a crash loses the unsaved recording.
+
 ## Known limitations
 
 - If you share a window and then minimize it, most systems stop sending its picture, so the video freezes until you bring it back.
 - When you record your entire screen, the browser's own "sharing your screen" bar may appear in the video. Most browsers let you hide it.
-- Very long recordings are held in memory until you save them.
+- If the computer goes to sleep, capture stops.
 
 ## License
 

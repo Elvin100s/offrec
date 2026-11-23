@@ -1098,3 +1098,36 @@ html.pip-doc,
   box-shadow: 0 0 18px rgba(255, 77, 94, 0.6);
   animation: count-pop 1s var(--ease-out);
 }
+
+/* ---------- Save to file while recording ---------- */
+
+.file-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 36px;
+  padding: 4px 14px 4px 10px;
+  border-radius: 999px;
+  background: var(--chip);
+  border: 1px solid var(--glass-border);
+  font-size: 13px;
+  color: var(--text-2);
+  cursor: pointer;
+}
+
+.file-toggle input {
+  width: 18px;
+  height: 18px;
+  margin: 0;
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+
+.file-toggle-hint {
+  color: var(--muted);
+}
+
+.saved-to .dot {
+  margin-right: 2px;
+  vertical-align: 1px;
+}
