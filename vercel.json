@@ -3,6 +3,7 @@
   "framework": "vite",
   "buildCommand": "npm run build",
   "outputDirectory": "dist",
+  "redirects": [{ "source": "/record", "destination": "/record/", "permanent": true }],
   "headers": [
     {
       "source": "/(.*)",

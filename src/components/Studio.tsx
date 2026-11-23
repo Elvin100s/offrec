@@ -109,7 +109,7 @@ export function Studio(props: StudioProps) {
     dragRef.current = { mode, startX: event.clientX, startY: event.clientY, start: overlay, pointerId: event.pointerId };
   };
 
-  const onPointerMove = (event: ReactPointerEvent<HTMLElement>) => {
+  const applyDrag = (event: ReactPointerEvent<HTMLElement>) => {
     const drag = dragRef.current;
     const stage = stageRef.current;
     if (!drag || !stage || event.pointerId !== drag.pointerId) return;
@@ -124,9 +124,13 @@ export function Studio(props: StudioProps) {
     onOverlay(next);
   };
 
+  const onPointerMove = applyDrag;
+
   const endDrag = (event: ReactPointerEvent<HTMLElement>) => {
     const drag = dragRef.current;
     if (!drag || event.pointerId !== drag.pointerId) return;
+    // Apply the release position too, in case the last move event was coalesced away.
+    if (event.type === 'pointerup') applyDrag(event);
     dragRef.current = null;
     if (event.currentTarget.hasPointerCapture(event.pointerId)) {
       event.currentTarget.releasePointerCapture(event.pointerId);

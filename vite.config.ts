@@ -14,6 +14,12 @@ export default defineConfig({
   plugins: [react()],
   worker: { format: 'es' },
   // assetsInlineLimit 0: never turn small fonts into data: URLs, which the CSP (font-src 'self') blocks.
-  build: { target: 'es2022', sourcemap: false, assetsInlineLimit: 0 },
+  build: {
+    target: 'es2022',
+    sourcemap: false,
+    assetsInlineLimit: 0,
+    // Two pages: the landing page at / and the recorder at /record/.
+    rollupOptions: { input: { main: 'index.html', record: 'record/index.html' } },
+  },
   preview: { headers: securityHeaders },
 });

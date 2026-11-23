@@ -5,14 +5,331 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="color-scheme" content="dark light" />
     <meta name="theme-color" content="#07080B" />
-    <meta name="description" content="Offrec: free, open-source screen recording with a camera overlay. Screen recording that never leaves your device." />
+    <title>Offrec – Screen recording that never leaves your device</title>
+    <meta
+      name="description"
+      content="Free, open-source screen recorder that runs in your browser. Record your screen, a window or a tab with your camera in any corner. No account, no uploads."
+    />
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
     <link rel="icon" href="/favicon-32.png" sizes="32x32" type="image/png" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
-    <title>Offrec</title>
+    <link rel="canonical" href="https://offrec-one.vercel.app/" />
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="Offrec" />
+    <meta property="og:title" content="Offrec – Screen recording that never leaves your device" />
+    <meta
+      property="og:description"
+      content="Free, open-source screen recorder in your browser. Camera in any corner, no account, no uploads."
+    />
+    <meta property="og:url" content="https://offrec-one.vercel.app/" />
+    <meta property="og:image" content="https://offrec-one.vercel.app/og.png" />
+    <meta property="og:image:width" content="1280" />
+    <meta property="og:image:height" content="640" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <script type="module" src="/src/landing/main.ts"></script>
   </head>
-  <body>
-    <div id="root"></div>
-    <script type="module" src="/src/main.tsx"></script>
+  <body class="landing">
+    <a class="skip-link" href="#main">Skip to content</a>
+
+    <header class="nav">
+      <div class="nav-inner">
+        <a class="wordmark" href="/" aria-label="Offrec home">
+          <svg class="wordmark-mark" width="26" height="26" viewBox="0 0 64 64" fill="none" aria-hidden="true">
+            <circle cx="32" cy="32" r="25" stroke="currentColor" stroke-width="6" stroke-linecap="round" stroke-dasharray="125 32" transform="rotate(-30 32 32)" />
+            <circle cx="32" cy="32" r="12" fill="#FF4D5E" />
+          </svg>
+          offrec
+        </a>
+        <nav class="nav-links" aria-label="Sections">
+          <a href="#how">How it works</a>
+          <a href="#features">Features</a>
+          <a href="#privacy">Privacy</a>
+          <a href="#faq">FAQ</a>
+        </nav>
+        <div class="nav-actions">
+          <a class="btn btn-glass nav-github" href="https://github.com/Elvin100s/offrec" rel="noopener">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+              <path d="M12 .5a11.5 11.5 0 0 0-3.64 22.41c.58.1.79-.25.79-.56v-2c-3.2.7-3.88-1.37-3.88-1.37-.53-1.33-1.28-1.69-1.28-1.69-1.05-.72.08-.7.08-.7 1.16.08 1.77 1.19 1.77 1.19 1.03 1.77 2.71 1.26 3.37.96.1-.75.4-1.26.73-1.55-2.55-.29-5.24-1.28-5.24-5.69 0-1.26.45-2.29 1.19-3.1-.12-.29-.52-1.46.11-3.05 0 0 .97-.31 3.17 1.18a11 11 0 0 1 5.78 0c2.2-1.49 3.17-1.18 3.17-1.18.63 1.59.23 2.76.11 3.05.74.81 1.19 1.84 1.19 3.1 0 4.42-2.69 5.39-5.26 5.68.41.36.78 1.06.78 2.14v3.17c0 .31.21.67.8.56A11.5 11.5 0 0 0 12 .5Z" />
+            </svg>
+            <span>GitHub</span>
+          </a>
+          <a class="btn btn-accent" href="/record/">
+            <svg width="12" height="12" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9" fill="currentColor" /></svg>
+            Start recording
+          </a>
+        </div>
+      </div>
+    </header>
+
+    <main id="main">
+      <!-- Hero -->
+      <section class="hero">
+        <div class="hero-copy">
+          <p class="eyebrow"><span class="dot dot-rec pulse"></span> Free · Open source · In your browser</p>
+          <h1>Screen recording that <span class="accent">never leaves</span> your device.</h1>
+          <p class="lede">
+            Record your screen, a window or a tab with your camera in any corner. No account, no uploads, no watermark.
+            The video goes straight to your computer.
+          </p>
+          <div class="hero-ctas">
+            <a class="btn btn-accent btn-hero" href="/record/">
+              <svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9" fill="currentColor" /></svg>
+              Start recording
+            </a>
+            <a class="btn btn-glass btn-hero-2" href="https://github.com/Elvin100s/offrec" rel="noopener">View the code</a>
+          </div>
+          <p class="hero-note">Works in Chrome, Edge and Firefox on a computer. Nothing to install.</p>
+        </div>
+
+        <!-- Animated product demo (decorative) -->
+        <div class="demo" aria-hidden="true">
+          <div class="demo-stage">
+            <div class="demo-window">
+              <div class="demo-titlebar"><i></i><i></i><i></i><b></b></div>
+              <div class="demo-body">
+                <div class="demo-side"><i></i><i></i><i></i><i></i></div>
+                <div class="demo-main">
+                  <i class="demo-h"></i><i class="demo-l"></i><i class="demo-l short"></i>
+                  <div class="demo-bars"><i></i><i></i><i></i><i class="hi"></i><i></i></div>
+                </div>
+              </div>
+            </div>
+            <div class="demo-cam">
+              <svg viewBox="0 0 100 80"><circle cx="50" cy="32" r="16" /><path d="M18 80c2-18 16-28 32-28s30 10 32 28z" /></svg>
+            </div>
+            <span class="demo-rec"><span class="dot dot-rec pulse"></span>REC</span>
+          </div>
+
+          <div class="demo-dock">
+            <span class="demo-btn on">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 10l5-3v10l-5-3z" /><rect x="3" y="6" width="12" height="12" rx="2" /></svg>
+            </span>
+            <span class="demo-btn on">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="3" width="6" height="11" rx="3" /><path d="M5 11a7 7 0 0 0 14 0" /><path d="M12 18v3" /></svg>
+            </span>
+            <span class="demo-seg">
+              <span class="demo-corner c-br"><svg width="18" height="18" viewBox="0 0 24 24" fill="none"><rect x="3" y="4" width="18" height="16" rx="3" stroke="currentColor" stroke-width="1.8" /><rect x="13" y="12" width="6" height="5" rx="1.2" fill="currentColor" /></svg></span>
+              <span class="demo-corner c-bl"><svg width="18" height="18" viewBox="0 0 24 24" fill="none"><rect x="3" y="4" width="18" height="16" rx="3" stroke="currentColor" stroke-width="1.8" /><rect x="5" y="12" width="6" height="5" rx="1.2" fill="currentColor" /></svg></span>
+              <span class="demo-corner c-tl"><svg width="18" height="18" viewBox="0 0 24 24" fill="none"><rect x="3" y="4" width="18" height="16" rx="3" stroke="currentColor" stroke-width="1.8" /><rect x="5" y="7" width="6" height="5" rx="1.2" fill="currentColor" /></svg></span>
+              <span class="demo-corner c-tr"><svg width="18" height="18" viewBox="0 0 24 24" fill="none"><rect x="3" y="4" width="18" height="16" rx="3" stroke="currentColor" stroke-width="1.8" /><rect x="13" y="7" width="6" height="5" rx="1.2" fill="currentColor" /></svg></span>
+            </span>
+            <span class="demo-field">Product demo</span>
+            <span class="demo-spacer"></span>
+            <span class="demo-timer"><span class="dot dot-rec pulse"></span><span data-demo-timer>02:14</span></span>
+            <span class="demo-done">
+              <svg width="11" height="11" viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="3" fill="currentColor" /></svg>
+              Done
+            </span>
+          </div>
+
+          <div class="demo-pip">
+            <span class="demo-pip-title">
+              <svg width="12" height="12" viewBox="0 0 64 64" fill="none"><circle cx="32" cy="32" r="25" stroke="currentColor" stroke-width="7" stroke-linecap="round" stroke-dasharray="125 32" transform="rotate(-30 32 32)" /><circle cx="32" cy="32" r="12" fill="#FF4D5E" /></svg>
+              Offrec
+            </span>
+            <span class="demo-pip-row">
+              <span class="demo-timer small"><span class="dot dot-rec pulse"></span><span data-demo-timer>02:14</span></span>
+              <span class="demo-pip-btn"><svg width="14" height="14" viewBox="0 0 24 24"><rect x="6" y="5" width="4" height="14" rx="1" fill="currentColor" /><rect x="14" y="5" width="4" height="14" rx="1" fill="currentColor" /></svg></span>
+              <span class="demo-pip-stop"><svg width="9" height="9" viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="3" fill="currentColor" /></svg>Stop</span>
+            </span>
+          </div>
+        </div>
+      </section>
+
+      <!-- Trust strip -->
+      <section class="strip" aria-label="At a glance">
+        <ul>
+          <li>No account</li>
+          <li>No uploads</li>
+          <li>No watermark</li>
+          <li>No time limit</li>
+          <li>MIT licensed</li>
+        </ul>
+      </section>
+
+      <!-- How it works -->
+      <section id="how" class="section">
+        <div class="section-head">
+          <p class="kicker">How it works</p>
+          <h2>Three steps. Then you're recording.</h2>
+        </div>
+        <ol class="steps">
+          <li class="card step">
+            <span class="step-num">1</span>
+            <h3>Pick what to record</h3>
+            <p>A single window, a browser tab or your entire screen. Your browser asks which one, and only that gets recorded.</p>
+          </li>
+          <li class="card step">
+            <span class="step-num">2</span>
+            <h3>Place your camera</h3>
+            <p>Snap it to any corner, drag it anywhere and resize it from its corners. Turn it off any time without losing your place.</p>
+          </li>
+          <li class="card step">
+            <span class="step-num">3</span>
+            <h3>Record and save</h3>
+            <p>A 3-second countdown gives you time to switch windows. Pause whenever you like, then name the video and keep it.</p>
+          </li>
+        </ol>
+      </section>
+
+      <!-- Features -->
+      <section id="features" class="section">
+        <div class="section-head">
+          <p class="kicker">Features</p>
+          <h2>Everything you need, nothing you don't.</h2>
+        </div>
+        <div class="features">
+          <article class="card feature">
+            <span class="feature-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="3" /><rect x="12" y="11" width="7" height="6" rx="1.5" fill="currentColor" stroke="none" /></svg></span>
+            <h3>Camera in any corner</h3>
+            <p>Your camera sits on top of your screen, mirrored like a selfie view. Four corner presets, free dragging and resizing.</p>
+          </article>
+          <article class="card feature">
+            <span class="feature-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="7" width="13" height="13" rx="2" /><path d="M14 3h7v7" /><path d="M21 3l-8 8" /></svg></span>
+            <h3>Floating controls</h3>
+            <p>A small Pause and Stop window stays on top of the app you're recording, and never shows up in the video. In Chrome and Edge.</p>
+          </article>
+          <article class="card feature">
+            <span class="feature-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v11" /><path d="M7 10l5 5 5-5" /><path d="M5 20h14" /></svg></span>
+            <h3>Saves as you record</h3>
+            <p>In Chrome and Edge the video is written to a file on your computer every second, so long recordings never fill up memory.</p>
+          </article>
+          <article class="card feature">
+            <span class="feature-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true"><rect x="6" y="5" width="4" height="14" rx="1" fill="currentColor" /><rect x="14" y="5" width="4" height="14" rx="1" fill="currentColor" /></svg></span>
+            <h3>Pause without gaps</h3>
+            <p>Pause and resume as often as you need. The pauses are cut out, so the finished video plays straight through.</p>
+          </article>
+          <article class="card feature">
+            <span class="feature-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3" /><path d="M5 11a7 7 0 0 0 14 0" /><path d="M12 18v3" /></svg></span>
+            <h3>Your voice and the tab's sound</h3>
+            <p>Record your microphone together with audio from a shared tab. Mute and unmute mid-recording with one key.</p>
+          </article>
+          <article class="card feature">
+            <span class="feature-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="12" rx="2" /><path d="M8 20h8" /><path d="M12 16v4" /></svg></span>
+            <h3>Keeps going in the background</h3>
+            <p>Switch to the window you're presenting. Offrec keeps recording smoothly even when its own tab is out of sight.</p>
+          </article>
+        </div>
+      </section>
+
+      <!-- Privacy -->
+      <section id="privacy" class="section privacy-section">
+        <div class="privacy-grid">
+          <div>
+            <p class="kicker">Privacy</p>
+            <h2>Off the record, by design.</h2>
+            <p class="section-lede">
+              Offrec has no server to send your video to. Capturing, mixing and saving all happen inside your browser, on your
+              computer.
+            </p>
+            <ul class="checks">
+              <li><strong>No uploads.</strong> Your recordings only exist where you save them.</li>
+              <li><strong>No account.</strong> Nothing to sign up for, nothing to log into.</li>
+              <li><strong>No tracking.</strong> No cookies, no analytics, no fonts or scripts from other companies.</li>
+              <li><strong>Open source.</strong> Every line is on GitHub for anyone to check.</li>
+            </ul>
+          </div>
+          <figure class="card code-card">
+            <div class="code-head"><span></span><span></span><span></span><b>Response header sent with every page</b></div>
+            <pre><code><span class="c-key">Content-Security-Policy:</span>
+  default-src <span class="c-val">'none'</span>;
+  script-src <span class="c-val">'self'</span>;
+  <span class="c-hi">connect-src <span class="c-val">'none'</span>;</span>
+  …</code></pre>
+            <figcaption>
+              <code>connect-src 'none'</code> tells your browser to block this page from sending data anywhere. Even if
+              someone wanted Offrec to upload your video, the browser wouldn't allow it.
+            </figcaption>
+          </figure>
+        </div>
+      </section>
+
+      <!-- FAQ -->
+      <section id="faq" class="section">
+        <div class="section-head">
+          <p class="kicker">FAQ</p>
+          <h2>Questions, answered.</h2>
+        </div>
+        <div class="faq">
+          <details class="card">
+            <summary>Is it really free?</summary>
+            <p>Yes. Offrec is open source under the MIT license. There's no account, no watermark, no time limit and no paid tier.</p>
+          </details>
+          <details class="card">
+            <summary>Where do my recordings go?</summary>
+            <p>
+              Only to your computer. In Chrome and Edge you choose a file when you press Record and the video is written there as you
+              record. In other browsers you save it when you're done.
+            </p>
+          </details>
+          <details class="card">
+            <summary>How long can I record?</summary>
+            <p>
+              There's no time limit. At most a recording takes about 2.3 GB per hour, and still screens like slides are much smaller.
+              With saving-as-you-record, the only limit is free disk space.
+            </p>
+          </details>
+          <details class="card">
+            <summary>Which browsers does it work in?</summary>
+            <p>
+              Chrome, Edge and Firefox on a computer. The floating controls and saving-as-you-record need Chrome or Edge. Phones and
+              tablets can't capture their screen from a web page.
+            </p>
+          </details>
+          <details class="card">
+            <summary>Can it record sound?</summary>
+            <p>
+              Your microphone, plus the audio of a browser tab when you tick "Share audio" in the browser's picker. Some browsers also
+              offer system audio when you share your entire screen.
+            </p>
+          </details>
+          <details class="card">
+            <summary>What format are the videos?</summary>
+            <p>MP4 where your browser can record it, otherwise WebM. Both play in browsers and in players like VLC.</p>
+          </details>
+          <details class="card">
+            <summary>Why aren't there floating controls when I record my entire screen?</summary>
+            <p>
+              Because they'd end up in your video. A window or tab recording only captures that window or tab, so the controls can
+              float on top safely. For a full-screen recording, come back to the Offrec tab to pause or stop.
+            </p>
+          </details>
+        </div>
+      </section>
+
+      <!-- Final CTA -->
+      <section class="final">
+        <div class="final-card">
+          <svg class="final-mark" width="72" height="72" viewBox="0 0 64 64" fill="none" aria-hidden="true">
+            <circle cx="32" cy="32" r="25" stroke="currentColor" stroke-width="5" stroke-linecap="round" stroke-dasharray="125 32" transform="rotate(-30 32 32)" />
+            <circle cx="32" cy="32" r="11" fill="#FF4D5E" />
+          </svg>
+          <h2>Ready when you are.</h2>
+          <p>No sign-up. Open it, pick a window, hit record.</p>
+          <a class="btn btn-accent btn-hero" href="/record/">
+            <svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9" fill="currentColor" /></svg>
+            Start recording
+          </a>
+        </div>
+      </section>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        <a class="wordmark small" href="/" aria-label="Offrec home">
+          <svg class="wordmark-mark" width="20" height="20" viewBox="0 0 64 64" fill="none" aria-hidden="true">
+            <circle cx="32" cy="32" r="25" stroke="currentColor" stroke-width="6" stroke-linecap="round" stroke-dasharray="125 32" transform="rotate(-30 32 32)" />
+            <circle cx="32" cy="32" r="12" fill="#FF4D5E" />
+          </svg>
+          offrec
+        </a>
+        <p>Screen recording that never leaves your device.</p>
+        <nav class="footer-links" aria-label="Footer">
+          <a href="/record/">Start recording</a>
+          <a href="https://github.com/Elvin100s/offrec" rel="noopener">GitHub</a>
+          <a href="https://github.com/Elvin100s/offrec/blob/main/LICENSE" rel="noopener">MIT License</a>
+        </nav>
+      </div>
+    </footer>
   </body>
 </html>

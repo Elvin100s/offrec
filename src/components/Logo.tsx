@@ -41,9 +41,9 @@ export function LogoMark({ size = 24, className, label }: LogoProps) {
 
 export function Wordmark() {
   return (
-    <span className="wordmark">
+    <a className="wordmark" href="/" title="Offrec home">
       <LogoMark size={24} className="wordmark-mark" />
       offrec
-    </span>
+    </a>
   );
 }

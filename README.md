@@ -6,7 +6,7 @@
 
 <p align="center"><strong>Screen recording that never leaves your device.</strong></p>
 
-<p align="center"><a href="https://offrec-one.vercel.app"><strong>Try it: offrec-one.vercel.app</strong></a></p>
+<p align="center"><a href="https://offrec-one.vercel.app/record/"><strong>Start recording</strong></a> · <a href="https://offrec-one.vercel.app">Website</a></p>
 
 Offrec is a free, open-source screen recorder that runs entirely in your browser. Pick a window, a tab or your whole screen, add your camera in any corner, record, then save the video straight to your computer. No account, no uploads, no tracking.
 
@@ -77,6 +77,7 @@ src/
   engine/mime.ts         recording format selection
   state.ts               the app's state machine
   App.tsx                wires the state machine, session and floating window together
+  landing/               the landing page at / (the recorder lives at /record/)
   components/            screens and controls
   lib/                   overlay geometry, file names, formatting
 ```
