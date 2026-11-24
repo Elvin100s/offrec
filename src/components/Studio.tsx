@@ -1,4 +1,4 @@
-import { useEffect, useRef, type PointerEvent as ReactPointerEvent } from 'react';
+import { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react';
 import type { CameraFailure, MicStatus, Surface } from '../engine/Session';
 import {
   CORNERS,
@@ -321,6 +321,16 @@ export function Studio(props: StudioProps) {
 
 function Notices(props: StudioProps) {
   const { phase, surface, camOn, camError, micStatus, hasDisplayAudio } = props;
+  // If the camera hasn't started after a few seconds, Chrome is usually waiting on a (sometimes hidden) permission prompt.
+  const [camSlow, setCamSlow] = useState(false);
+  useEffect(() => {
+    if (!props.camPending) {
+      setCamSlow(false);
+      return;
+    }
+    const timer = window.setTimeout(() => setCamSlow(true), 4000);
+    return () => window.clearTimeout(timer);
+  }, [props.camPending]);
   const micMissing = micStatus === 'denied' || micStatus === 'none' || micStatus === 'error';
   const floating = pipSupported && (surface === 'window' || surface === 'browser');
   const lines: string[] = [];
@@ -381,6 +391,14 @@ function Notices(props: StudioProps) {
             Save to a file while recording <span className="file-toggle-hint">· safest for long recordings</span>
           </span>
         </label>
+      ) : null}
+      {camSlow ? (
+        <p className="notice notice-warn">
+          <span>
+            <strong>Waiting for the camera…</strong> Look for a camera icon or popup in the address bar and choose Allow.
+            If there's nothing there, restart Chrome (type chrome://restart in the address bar).
+          </span>
+        </p>
       ) : null}
       {camError ? (
         <p className="notice notice-warn">
