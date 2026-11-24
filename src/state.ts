@@ -21,6 +21,8 @@ export interface ReviewInfo {
   failed: boolean;
   /** File name the recording was written to while recording, if any. */
   savedTo: string | null;
+  /** Finished early with "Finish now": the last moments may be missing. */
+  partial: boolean;
 }
 
 export interface AppState {
@@ -56,6 +58,8 @@ export interface AppState {
   choosingFile: boolean;
   /** File currently being written, during the countdown and recording. */
   savingTo: string | null;
+  /** Stop was pressed; waiting for the recorder to finish. */
+  finishing: boolean;
   message: MessageKey | null;
   review: ReviewInfo | null;
   stoppedFromPip: boolean;
@@ -88,6 +92,7 @@ export type Action =
   | { type: 'setSaveToFile'; on: boolean }
   | { type: 'choosingFile'; on: boolean }
   | { type: 'savingTo'; name: string | null }
+  | { type: 'finishing' }
   | { type: 'countdown'; secondsLeft: number }
   | { type: 'countdownCancelled' }
   | { type: 'recording' }
@@ -125,6 +130,7 @@ export function initialState(): AppState {
     saveToFile: fileSaveSupported,
     choosingFile: false,
     savingTo: null,
+    finishing: false,
     message: null,
     review: null,
     stoppedFromPip: false,
@@ -224,6 +230,9 @@ export function reducer(s: AppState, a: Action): AppState {
     case 'savingTo':
       return isLive(s.state) ? { ...s, savingTo: a.name } : s;
 
+    case 'finishing':
+      return s.state === 'RECORDING' || s.state === 'PAUSED' ? { ...s, finishing: true } : s;
+
     case 'countdown':
       if (s.state !== 'READY' && s.state !== 'COUNTDOWN') return s;
       return { ...s, state: 'COUNTDOWN', countdown: a.secondsLeft, choosingFile: false, message: null };
@@ -255,6 +264,7 @@ export function reducer(s: AppState, a: Action): AppState {
         camOn: false,
         camPending: false,
         savingTo: null,
+        finishing: false,
       };
 
     case 'saved':
@@ -272,6 +282,7 @@ export function reducer(s: AppState, a: Action): AppState {
         countdown: COUNTDOWN_SECONDS,
         choosingFile: false,
         savingTo: null,
+        finishing: false,
         stoppedFromPip: false,
       };
 

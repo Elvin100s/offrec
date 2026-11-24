@@ -16,17 +16,24 @@ const pipSupported = typeof window !== 'undefined' && 'documentPictureInPicture'
 /** Floating controls are only allowed when they can't end up in the video. */
 const canFloat = (surface: Surface) => pipSupported && (surface === 'window' || surface === 'browser');
 
+/** At most 1080p and 30 fps, so high-resolution screens don't overload the encoder. */
+const CAPTURE_LIMITS = {
+  width: { max: 1920 },
+  height: { max: 1080 },
+  frameRate: { ideal: 30, max: 30 },
+};
+
 function displayOptions(mode: CaptureMode): DisplayMediaStreamOptions {
   const options: Record<string, unknown> =
     mode === 'window'
       ? {
-          video: { displaySurface: 'window' },
+          video: { displaySurface: 'window', ...CAPTURE_LIMITS },
           audio: true,
           monitorTypeSurfaces: 'exclude',
           selfBrowserSurface: 'exclude',
         }
       : {
-          video: { displaySurface: 'monitor' },
+          video: { displaySurface: 'monitor', ...CAPTURE_LIMITS },
           audio: true,
           monitorTypeSurfaces: 'include',
           selfBrowserSurface: 'exclude',
@@ -126,6 +133,7 @@ export default function App() {
       const phase = stateRef.current.state;
       if (!session || (phase !== 'RECORDING' && phase !== 'PAUSED') || finishingRef.current) return;
       finishingRef.current = true;
+      dispatch({ type: 'finishing' });
       void session.stop().then((result) => {
         finishingRef.current = false;
         if (sessionRef.current !== session) return;
@@ -144,6 +152,7 @@ export default function App() {
             saved: result.savedTo !== null && result.blob.size > 0,
             failed: result.failed,
             savedTo: result.savedTo,
+            partial: result.partial,
           },
         });
         if (!fromPip) closePip();
@@ -453,6 +462,10 @@ export default function App() {
     dispatch({ type: 'reset' });
   }, [closePip, revokeReview]);
 
+  const finishNow = useCallback(() => {
+    sessionRef.current?.finishNow();
+  }, []);
+
   const openRecorder = useCallback(() => {
     window.focus();
     closePip();
@@ -583,6 +596,8 @@ export default function App() {
           onRecord={record}
           onTogglePause={togglePause}
           onDone={() => finish(false)}
+          finishing={state.finishing}
+          onFinishNow={finishNow}
           onDismissCamError={() => dispatch({ type: 'dismissCamError' })}
           onDismissMessage={() => dispatch({ type: 'message', message: null })}
         />
@@ -611,6 +626,7 @@ export default function App() {
               onToggleMic={toggleMic}
               onTogglePause={togglePause}
               onStop={() => finish(true)}
+              finishing={state.finishing}
               onOpenRecorder={openRecorder}
             />,
             pipWindow.document.body,

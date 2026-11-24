@@ -69,6 +69,9 @@ interface StudioProps {
   onRecord: () => void;
   onTogglePause: () => void;
   onDone: () => void;
+  /** Stop was pressed and the recorder is finishing. */
+  finishing: boolean;
+  onFinishNow: () => void;
   onDismissCamError: () => void;
   onDismissMessage: () => void;
 }
@@ -303,13 +306,21 @@ export function Studio(props: StudioProps) {
                 className="btn btn-secondary"
                 onClick={props.onTogglePause}
                 title={phase === 'PAUSED' ? 'Resume (Space)' : 'Pause (Space)'}
+                disabled={props.finishing}
               >
                 {phase === 'PAUSED' ? <PlayIcon /> : <PauseIcon />}
                 {phase === 'PAUSED' ? 'Resume' : 'Pause'}
               </button>
-              <button type="button" className="btn btn-accent" onClick={props.onDone} title="Finish recording">
-                <StopIcon />
-                Done
+              <button
+                type="button"
+                className="btn btn-accent"
+                onClick={props.onDone}
+                title="Finish recording"
+                disabled={props.finishing}
+                aria-busy={props.finishing}
+              >
+                {props.finishing ? <span className="spinner" aria-hidden="true" /> : <StopIcon />}
+                {props.finishing ? 'Finishing…' : 'Done'}
               </button>
             </>
           )}
@@ -321,6 +332,17 @@ export function Studio(props: StudioProps) {
 
 function Notices(props: StudioProps) {
   const { phase, surface, camOn, camError, micStatus, hasDisplayAudio } = props;
+  // If finishing takes a while (very busy computer), offer to keep what's been recorded so far.
+  const [finishSlow, setFinishSlow] = useState(false);
+  useEffect(() => {
+    if (!props.finishing) {
+      setFinishSlow(false);
+      return;
+    }
+    const timer = window.setTimeout(() => setFinishSlow(true), 8000);
+    return () => window.clearTimeout(timer);
+  }, [props.finishing]);
+
   // If the camera hasn't started after a few seconds, Chrome is usually waiting on a (sometimes hidden) permission prompt.
   const [camSlow, setCamSlow] = useState(false);
   useEffect(() => {
@@ -391,6 +413,21 @@ function Notices(props: StudioProps) {
             Save to a file while recording <span className="file-toggle-hint">· safest for long recordings</span>
           </span>
         </label>
+      ) : null}
+      {props.finishing ? (
+        <p className="notice notice-warn">
+          <span>
+            <strong>Finishing your video…</strong>{' '}
+            {finishSlow
+              ? 'Your computer is very busy, so the last part is still being processed. You can wait, or keep what is ready now.'
+              : 'This usually takes a second.'}
+          </span>
+          {finishSlow ? (
+            <button type="button" className="btn btn-secondary" onClick={props.onFinishNow}>
+              Finish now
+            </button>
+          ) : null}
+        </p>
       ) : null}
       {camSlow ? (
         <p className="notice notice-warn">

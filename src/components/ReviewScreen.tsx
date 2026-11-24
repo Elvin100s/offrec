@@ -44,6 +44,14 @@ export function ReviewScreen({ review, title, onTitle, onSave, onRecordAnother, 
     <main className="review">
       <div className="review-inner">
         {review.failed ? <MessageCard copy={RECORDER_FAILED} /> : null}
+        {review.partial && !review.failed ? (
+          <p className="notice notice-warn">
+            <span>
+              <strong>Finished early.</strong> The computer was very busy, so the last few seconds that hadn't been
+              processed yet may be missing. Closing heavy apps (like 3D renders) while recording avoids this.
+            </span>
+          </p>
+        ) : null}
 
         <div className="player">
           <video src={review.url} controls playsInline preload="metadata" onLoadedMetadata={fixDuration} />

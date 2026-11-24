@@ -15,6 +15,7 @@ interface FloatingControlsProps {
   onTogglePause: () => void;
   onStop: () => void;
   onOpenRecorder: () => void;
+  finishing: boolean;
 }
 
 /** Rendered into the Document Picture-in-Picture window. */
@@ -79,9 +80,16 @@ export function FloatingControls(props: FloatingControlsProps) {
       >
         {phase === 'PAUSED' ? <PlayIcon size={17} /> : <PauseIcon size={17} />}
       </button>
-      <button type="button" className="btn btn-accent" onClick={props.onStop} title="Stop and review">
-        <StopIcon size={12} />
-        Stop
+      <button
+        type="button"
+        className="btn btn-accent"
+        onClick={props.onStop}
+        title="Stop and review"
+        disabled={props.finishing}
+        aria-busy={props.finishing}
+      >
+        {props.finishing ? <span className="spinner" aria-hidden="true" /> : <StopIcon size={12} />}
+        {props.finishing ? 'Finishing…' : 'Stop'}
       </button>
     </div>
   );

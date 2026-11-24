@@ -15,6 +15,8 @@ export interface RecordingResult {
   failed: boolean;
   /** Name of the file the recording was streamed to, or null if it was kept in memory. */
   savedTo: string | null;
+  /** The user chose "Finish now" before the encoder caught up, so the very end may be missing. */
+  partial: boolean;
 }
 
 export interface SessionEvents {
@@ -125,6 +127,10 @@ export class Session {
   private mime: MimeChoice | null = null;
   private failed = false;
   private stopPromise: Promise<RecordingResult> | null = null;
+  /** Resolves the pending stop right away with whatever has been recorded so far. */
+  private finishEarly: (() => void) | null = null;
+  /** Set once the result has been assembled; later chunks from the recorder are ignored. */
+  private finalized = false;
 
   private countdown: {
     end: number;
@@ -313,7 +319,12 @@ export class Session {
     if (!media?.getUserMedia) return Promise.resolve({ ok: false, reason: 'error' });
 
     this.camPromise = media
-      .getUserMedia({ video: { width: { ideal: 1280 }, height: { ideal: 720 } }, audio: false })
+      // 640x360 is plenty for the overlay (about 350 px wide in a 1080p video). Most webcams send it
+      // uncompressed, so Chrome doesn't have to decode 30 JPEGs a second as it does at 1280x720.
+      .getUserMedia({
+        video: { width: { ideal: 640 }, height: { ideal: 360 }, frameRate: { ideal: 30, max: 30 } },
+        audio: false,
+      })
       .then(
         async (stream): Promise<CameraResult> => {
           if (this.disposed) {
@@ -478,7 +489,7 @@ export class Session {
     this.chunks = [];
     const sink = this.sink;
     recorder.ondataavailable = (event) => {
-      if (!event.data || event.data.size === 0) return;
+      if (this.finalized || !event.data || event.data.size === 0) return;
       if (!sink) {
         this.chunks.push(event.data);
         return;
@@ -545,7 +556,12 @@ export class Session {
 
     const sink = this.sink;
     this.stopPromise = new Promise<RecordingResult>((resolve) => {
-      const assemble = () => {
+      let assembled = false;
+      const assemble = (partial: boolean) => {
+        if (assembled) return;
+        assembled = true;
+        this.finalized = true;
+        this.finishEarly = null;
         if (!sink) {
           resolve({
             blob: new Blob(this.chunks, { type: mime.container }),
@@ -553,6 +569,7 @@ export class Session {
             durationMs,
             failed: this.failed,
             savedTo: null,
+            partial,
           });
           return;
         }
@@ -562,7 +579,7 @@ export class Session {
             await sink.chain;
             await sink.writable.close();
             const file = await sink.handle.getFile();
-            resolve({ blob: file, mime, durationMs, failed: this.failed, savedTo: sink.handle.name });
+            resolve({ blob: file, mime, durationMs, failed: this.failed, savedTo: sink.handle.name, partial });
           } catch {
             resolve({
               blob: new Blob([], { type: mime.container }),
@@ -570,6 +587,7 @@ export class Session {
               durationMs,
               failed: true,
               savedTo: sink.handle.name,
+              partial,
             });
           } finally {
             this.sink = null;
@@ -577,18 +595,26 @@ export class Session {
         })();
       };
       if (!recorder || recorder.state === 'inactive') {
-        assemble();
+        assemble(false);
         return;
       }
-      recorder.onstop = assemble;
+      // Normally the recorder finishes within a second. On a very busy computer the encoder can fall
+      // far behind; finishNow() lets the user keep what has been encoded so far instead of waiting.
+      this.finishEarly = () => assemble(true);
+      recorder.onstop = () => assemble(false);
       try {
         recorder.stop();
       } catch {
         this.failed = true;
-        assemble();
+        assemble(false);
       }
     });
     return this.stopPromise;
+  }
+
+  /** While stopping: stop waiting for the encoder and keep everything recorded so far. */
+  finishNow() {
+    this.finishEarly?.();
   }
 
   // ---------- Cleanup ----------
