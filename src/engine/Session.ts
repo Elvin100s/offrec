@@ -163,7 +163,11 @@ export class Session {
     this.canvas = document.createElement('canvas');
     this.canvas.width = this.width;
     this.canvas.height = this.height;
-    const ctx = this.canvas.getContext('2d', { alpha: false });
+    // willReadFrequently keeps this canvas on the CPU instead of the GPU. On some machines (seen on Linux
+    // with Intel graphics) a GPU canvas stops delivering frames to the recorder once the tab is hidden or
+    // minimized, freezing the video while audio keeps going. The CPU path keeps recording in the background,
+    // and compositing one 1080p frame on it costs only a few milliseconds.
+    const ctx = this.canvas.getContext('2d', { alpha: false, willReadFrequently: true });
     if (!ctx) throw new Error('Canvas 2D is not available');
     this.ctx = ctx;
     ctx.fillStyle = '#000';
