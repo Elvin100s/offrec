@@ -149,9 +149,8 @@ export default function App() {
             ext: result.mime.ext,
             size: result.blob.size,
             durationMs: result.durationMs,
-            saved: result.savedTo !== null && result.blob.size > 0,
+            saved: false,
             failed: result.failed,
-            savedTo: result.savedTo,
             partial: result.partial,
           },
         });
@@ -346,63 +345,15 @@ export default function App() {
   const record = useCallback(() => {
     const session = sessionRef.current;
     const s = stateRef.current;
-    if (!session || s.state !== 'READY' || s.choosingFile) return;
-    const mime = pickMime();
-    if (!mime) {
+    if (!session || s.state !== 'READY') return;
+    if (!pickMime()) {
       dispatch({ type: 'message', message: 'mime' });
       return;
     }
-
-    // Both of these need the click's user gesture, so call them right away.
-    // The save dialog goes first; the floating window second.
-    let picker: Promise<FileSystemFileHandle> | null = null;
-    if (s.saveToFile && window.showSaveFilePicker) {
-      try {
-        picker = window.showSaveFilePicker({
-          suggestedName: `${sanitizeFilename(s.title)}.${mime.ext}`,
-          id: 'offrec-recordings',
-          startIn: 'videos',
-          types: [
-            {
-              description: mime.ext === 'mp4' ? 'MP4 video' : 'WebM video',
-              accept: { [mime.container]: [`.${mime.ext}`] },
-            },
-          ],
-        });
-      } catch (error) {
-        picker = Promise.reject(error);
-      }
-    }
+    // Open the floating window inside this same click: the browser requires a user gesture.
     if (canFloat(session.surface)) openPip();
-
-    if (!picker) {
-      beginCountdown(session);
-      return;
-    }
-    dispatch({ type: 'choosingFile', on: true });
-    picker
-      .then(async (handle) => {
-        const writable = await handle.createWritable();
-        if (sessionRef.current !== session || stateRef.current.state !== 'READY') {
-          await writable.abort().catch(() => undefined);
-          return;
-        }
-        session.setFileSink(handle, writable);
-        dispatch({ type: 'savingTo', name: handle.name });
-        beginCountdown(session);
-      })
-      .catch((error: unknown) => {
-        if (sessionRef.current !== session || stateRef.current.state !== 'READY') return;
-        if (errorInfo(error).name === 'AbortError') {
-          // The user closed the save dialog: don't record.
-          closePip();
-          return;
-        }
-        // Saving to a file isn't possible here; record in memory instead.
-        beginCountdown(session);
-      })
-      .finally(() => dispatch({ type: 'choosingFile', on: false }));
-  }, [beginCountdown, closePip, openPip]);
+    beginCountdown(session);
+  }, [beginCountdown, openPip]);
 
   const cancelCountdown = useCallback(() => {
     const session = sessionRef.current;
@@ -582,10 +533,6 @@ export default function App() {
           title={state.title}
           elapsedSec={state.elapsedSec}
           countdown={state.countdown}
-          saveToFile={state.saveToFile}
-          choosingFile={state.choosingFile}
-          savingTo={state.savingTo}
-          onSaveToFile={(on) => dispatch({ type: 'setSaveToFile', on })}
           message={state.message}
           onCancelCountdown={cancelCountdown}
           onToggleCam={toggleCamera}

@@ -13,8 +13,6 @@ export interface RecordingResult {
   durationMs: number;
   /** The recorder reported an error; the blob holds whatever was captured before it. */
   failed: boolean;
-  /** Name of the file the recording was streamed to, or null if it was kept in memory. */
-  savedTo: string | null;
   /** The user chose "Finish now" before the encoder caught up, so the very end may be missing. */
   partial: boolean;
 }
@@ -118,12 +116,6 @@ export class Session {
   private recorder: MediaRecorder | null = null;
   private recordTrack: MediaStreamTrack | null = null;
   private chunks: Blob[] = [];
-  /** When set, chunks go straight to this file instead of memory. */
-  private sink: {
-    handle: FileSystemFileHandle;
-    writable: FileSystemWritableFileStream;
-    chain: Promise<void>;
-  } | null = null;
   private mime: MimeChoice | null = null;
   private failed = false;
   private stopPromise: Promise<RecordingResult> | null = null;
@@ -421,36 +413,6 @@ export class Session {
 
   cancelCountdown() {
     this.countdown = null;
-    this.clearFileSink(true);
-  }
-
-  // ---------- Saving to a file while recording ----------
-
-  /** Streams the recording into this file. Must be set before recording starts. */
-  setFileSink(handle: FileSystemFileHandle, writable: FileSystemWritableFileStream): boolean {
-    if (this.disposed || this.recorder) return false;
-    this.clearFileSink(false);
-    this.sink = { handle, writable, chain: Promise.resolve() };
-    return true;
-  }
-
-  get savingTo(): string | null {
-    return this.sink?.handle.name ?? null;
-  }
-
-  /** Drops the file sink before anything was recorded. Optionally removes the empty file the picker created. */
-  private clearFileSink(removeFile: boolean) {
-    const sink = this.sink;
-    if (!sink || this.recorder) return;
-    this.sink = null;
-    void sink.writable
-      .abort()
-      .catch(() => undefined)
-      .then(() => {
-        const removable = sink.handle as unknown as { remove?: () => Promise<void> };
-        return removeFile && removable.remove ? removable.remove() : undefined;
-      })
-      .catch(() => undefined);
   }
 
   private tickCountdown() {
@@ -487,23 +449,9 @@ export class Session {
       return 'error';
     }
     this.chunks = [];
-    const sink = this.sink;
     recorder.ondataavailable = (event) => {
       if (this.finalized || !event.data || event.data.size === 0) return;
-      if (!sink) {
-        this.chunks.push(event.data);
-        return;
-      }
-      // Write each one-second chunk to disk, in order.
-      const data = event.data;
-      sink.chain = sink.chain
-        .then(() => sink.writable.write(data))
-        .catch(() => {
-          if (!this.failed) {
-            this.failed = true;
-            this.events.onRecorderFailed();
-          }
-        });
+      this.chunks.push(event.data);
     };
     recorder.onerror = () => {
       this.failed = true;
@@ -554,7 +502,6 @@ export class Session {
     this.accumulatedMs = durationMs;
     this.running = false;
 
-    const sink = this.sink;
     this.stopPromise = new Promise<RecordingResult>((resolve) => {
       let assembled = false;
       const assemble = (partial: boolean) => {
@@ -562,37 +509,13 @@ export class Session {
         assembled = true;
         this.finalized = true;
         this.finishEarly = null;
-        if (!sink) {
-          resolve({
-            blob: new Blob(this.chunks, { type: mime.container }),
-            mime,
-            durationMs,
-            failed: this.failed,
-            savedTo: null,
-            partial,
-          });
-          return;
-        }
-        // Finish writing, close the file (this is when it appears under its real name), then read it back for review.
-        void (async () => {
-          try {
-            await sink.chain;
-            await sink.writable.close();
-            const file = await sink.handle.getFile();
-            resolve({ blob: file, mime, durationMs, failed: this.failed, savedTo: sink.handle.name, partial });
-          } catch {
-            resolve({
-              blob: new Blob([], { type: mime.container }),
-              mime,
-              durationMs,
-              failed: true,
-              savedTo: sink.handle.name,
-              partial,
-            });
-          } finally {
-            this.sink = null;
-          }
-        })();
+        resolve({
+          blob: new Blob(this.chunks, { type: mime.container }),
+          mime,
+          durationMs,
+          failed: this.failed,
+          partial,
+        });
       };
       if (!recorder || recorder.state === 'inactive') {
         assemble(false);
@@ -637,10 +560,6 @@ export class Session {
       } catch {
         // Already stopping.
       }
-    }
-    if (this.sink) {
-      // Leaving mid-recording: close the file so what was captured is kept.
-      void this.sink.chain.then(() => this.sink?.writable.close()).catch(() => undefined);
     }
     for (const stream of [this.display, this.camStream, this.micStream, this.dest?.stream ?? null]) {
       stream?.getTracks().forEach((t) => t.stop());
