@@ -64,7 +64,8 @@ npm run preview   # serve the production build at http://localhost:4173, with th
 
 ## How it works
 
-- The shared screen and the camera play in hidden `<video>` elements and are composited onto a `<canvas>`; the canvas stream plus a Web Audio mix (microphone and tab audio) is recorded with `MediaRecorder`.
+- In Chrome and Edge, frames are read straight from the screen and camera streams (`MediaStreamTrackProcessor`), composited on an off-page canvas, and handed to `MediaRecorder` through a `MediaStreamTrackGenerator`, together with a Web Audio mix of the microphone and tab audio. None of this depends on the Offrec tab being visible, so recording keeps going while you work in other windows. Firefox uses hidden `<video>` elements and `canvas.captureStream()` instead.
+- Recordings are 1080p, or 720p on computers with 4 or fewer CPU threads so the video encoder can keep up.
 - The draw loop is driven by a Web Worker timer instead of `requestAnimationFrame`, so recording keeps running smoothly while the tab is in the background.
 - The floating controls use the Document Picture-in-Picture API. They are only offered when you share a single window or tab, because a window or tab capture contains only that surface, so the controls can't end up in the video.
 - Output is MP4 where the browser supports it, otherwise WebM.

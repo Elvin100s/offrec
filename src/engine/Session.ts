@@ -67,7 +67,105 @@ function waitForMetadata(video: HTMLVideoElement): Promise<void> {
   });
 }
 
-function roundRectPath(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number) {
+/** Where the compositor gets screen and camera pictures from. */
+interface FrameSource {
+  /** The latest picture, or null if none has arrived yet. */
+  image(): { src: CanvasImageSource; w: number; h: number } | null;
+  /** Resolves once the first picture has arrived (or after 3 s). */
+  ready(): Promise<void>;
+  stop(): void;
+}
+
+/**
+ * Chrome and Edge: read VideoFrames straight from the track. Unlike a <video> element this keeps
+ * delivering frames whether or not the page is visible or painting.
+ */
+class TrackFrames implements FrameSource {
+  private latest: VideoFrame | null = null;
+  private readonly reader: ReadableStreamDefaultReader<VideoFrame>;
+  private readonly first: Promise<void>;
+  private resolveFirst: () => void = () => undefined;
+  private stopped = false;
+
+  constructor(track: MediaStreamTrack) {
+    this.first = new Promise<void>((resolve) => {
+      this.resolveFirst = resolve;
+      window.setTimeout(resolve, 3000);
+    });
+    this.reader = new MediaStreamTrackProcessor({ track }).readable.getReader();
+    void this.pump();
+  }
+
+  private async pump() {
+    try {
+      for (;;) {
+        const { value, done } = await this.reader.read();
+        if (done || !value) break;
+        if (this.stopped) {
+          value.close();
+          break;
+        }
+        // Keep only the newest frame; holding on to old ones would stall the camera or capture.
+        this.latest?.close();
+        this.latest = value;
+        this.resolveFirst();
+      }
+    } catch {
+      // The track ended.
+    }
+  }
+
+  image() {
+    const frame = this.latest;
+    return frame ? { src: frame, w: frame.displayWidth, h: frame.displayHeight } : null;
+  }
+
+  ready() {
+    return this.first;
+  }
+
+  stop() {
+    this.stopped = true;
+    void this.reader.cancel().catch(() => undefined);
+    this.latest?.close();
+    this.latest = null;
+  }
+}
+
+/** Firefox and older browsers: a hidden <video> element playing the stream. */
+class VideoElementFrames implements FrameSource {
+  private readonly video: HTMLVideoElement;
+
+  constructor(stream: MediaStream) {
+    this.video = hiddenVideo(stream);
+  }
+
+  image() {
+    const v = this.video;
+    return v.readyState >= 2 && v.videoWidth > 0 ? { src: v, w: v.videoWidth, h: v.videoHeight } : null;
+  }
+
+  ready() {
+    return waitForMetadata(this.video);
+  }
+
+  stop() {
+    this.video.pause();
+    this.video.srcObject = null;
+    this.video.remove();
+  }
+}
+
+/** Can we read frames from tracks and feed our own frames to the recorder? (Chrome, Edge) */
+const TRACK_PIPELINE =
+  typeof MediaStreamTrackProcessor === 'function' &&
+  typeof MediaStreamTrackGenerator === 'function' &&
+  typeof VideoFrame === 'function' &&
+  typeof OffscreenCanvas === 'function';
+
+type Ctx2D = CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D;
+
+function roundRectPath(ctx: Ctx2D, x: number, y: number, w: number, h: number, r: number) {
   const radius = Math.min(r, w / 2, h / 2);
   ctx.beginPath();
   ctx.moveTo(x + radius, y);
@@ -90,9 +188,17 @@ export class Session {
   readonly surface: Surface;
   readonly hasDisplayAudio: boolean;
 
-  private readonly ctx: CanvasRenderingContext2D;
+  /** Where every frame is composited: an OffscreenCanvas in the track pipeline, else the preview canvas. */
+  private readonly composite: HTMLCanvasElement | OffscreenCanvas;
+  private readonly ctx: Ctx2D;
+  /** Track pipeline only: the visible preview, updated while the tab is visible. */
+  private readonly previewCtx: CanvasRenderingContext2D | null;
+  private readonly useTracks: boolean;
   private readonly display: MediaStream;
-  private readonly screenVideo: HTMLVideoElement;
+  private readonly screenSource: FrameSource;
+  private generator: MediaStreamTrackGenerator | null = null;
+  private frameWriter: WritableStreamDefaultWriter<VideoFrame> | null = null;
+  private writingFrame = false;
   private readonly audio: AudioContext | null;
   private readonly dest: MediaStreamAudioDestinationNode | null;
   private readonly micGain: GainNode | null;
@@ -102,7 +208,7 @@ export class Session {
   private fallbackTimer: number | null = null;
 
   private camStream: MediaStream | null = null;
-  private camVideo: HTMLVideoElement | null = null;
+  private camSource: FrameSource | null = null;
   private camPromise: Promise<CameraResult> | null = null;
   private camVisible = false;
   private camAspect = 16 / 9;
@@ -153,25 +259,50 @@ export class Session {
       height?: number;
       displaySurface?: string;
     };
-    this.width = even(settings.width || 1920);
-    this.height = even(settings.height || 1080);
+    // Record at the shared screen's size, capped so the video encoder can keep up: 1080p normally,
+    // 720p on computers with 4 or fewer CPU threads (where 1080p encoding falls behind and Stop then
+    // has to wait for the backlog).
+    const sourceW = settings.width || 1920;
+    const sourceH = settings.height || 1080;
+    const weak = (navigator.hardwareConcurrency || 4) <= 4;
+    const [maxW, maxH] = weak ? [1280, 720] : [1920, 1080];
+    const fit = Math.min(1, maxW / sourceW, maxH / sourceH);
+    this.width = even(sourceW * fit);
+    this.height = even(sourceH * fit);
     const surface = settings.displaySurface;
     this.surface = surface === 'window' || surface === 'browser' || surface === 'monitor' ? surface : 'unknown';
 
     this.canvas = document.createElement('canvas');
     this.canvas.width = this.width;
     this.canvas.height = this.height;
-    // willReadFrequently keeps this canvas on the CPU instead of the GPU. On some machines (seen on Linux
-    // with Intel graphics) a GPU canvas stops delivering frames to the recorder once the tab is hidden or
-    // minimized, freezing the video while audio keeps going. The CPU path keeps recording in the background,
-    // and compositing one 1080p frame on it costs only a few milliseconds.
-    const ctx = this.canvas.getContext('2d', { alpha: false, willReadFrequently: true });
-    if (!ctx) throw new Error('Canvas 2D is not available');
-    this.ctx = ctx;
-    ctx.fillStyle = '#000';
-    ctx.fillRect(0, 0, this.width, this.height);
-
-    this.screenVideo = hiddenVideo(display);
+    // willReadFrequently keeps canvases on the CPU. On some machines (Linux, Intel graphics) GPU canvases
+    // stopped delivering frames once the tab was hidden.
+    const options: CanvasRenderingContext2DSettings = { alpha: false, willReadFrequently: true };
+    this.useTracks = TRACK_PIPELINE && !!track;
+    if (this.useTracks && track) {
+      // Chrome/Edge: composite off-page and hand each frame to the recorder ourselves, so recording never
+      // depends on this tab being visible or painting. The visible canvas is only a preview.
+      const offscreen = new OffscreenCanvas(this.width, this.height);
+      const octx = offscreen.getContext('2d', options);
+      const pctx = this.canvas.getContext('2d', options);
+      if (!octx || !pctx) throw new Error('Canvas 2D is not available');
+      this.composite = offscreen;
+      this.ctx = octx;
+      this.previewCtx = pctx;
+      this.screenSource = new TrackFrames(track);
+    } else {
+      const ctx = this.canvas.getContext('2d', options);
+      if (!ctx) throw new Error('Canvas 2D is not available');
+      this.composite = this.canvas;
+      this.ctx = ctx;
+      this.previewCtx = null;
+      this.screenSource = new VideoElementFrames(display);
+    }
+    for (const c of [this.ctx, this.previewCtx]) {
+      if (!c) continue;
+      c.fillStyle = '#000';
+      c.fillRect(0, 0, this.width, this.height);
+    }
     track?.addEventListener('ended', this.handleDisplayEnded);
 
     const displayAudio = display.getAudioTracks();
@@ -210,28 +341,50 @@ export class Session {
     this.tickCountdown();
     this.emitSecond();
 
-    const video = this.screenVideo;
-    if (video.readyState < 2 || video.videoWidth === 0) return;
+    const screen = this.screenSource.image();
+    if (!screen) return;
 
     const { ctx, width: W, height: H } = this;
-    const vw = video.videoWidth;
-    const vh = video.videoHeight;
-    if (vw === W && vh === H) {
-      ctx.drawImage(video, 0, 0, W, H);
+    if (Math.abs(screen.w / screen.h - W / H) < 0.01) {
+      // Same shape: scale straight into the canvas.
+      ctx.drawImage(screen.src, 0, 0, W, H);
     } else {
       // The shared window changed size: rescale into the fixed canvas, keeping its proportions.
       ctx.fillStyle = '#000';
       ctx.fillRect(0, 0, W, H);
-      const scale = Math.min(W / vw, H / vh);
-      const dw = vw * scale;
-      const dh = vh * scale;
-      ctx.drawImage(video, (W - dw) / 2, (H - dh) / 2, dw, dh);
+      const scale = Math.min(W / screen.w, H / screen.h);
+      const dw = screen.w * scale;
+      const dh = screen.h * scale;
+      ctx.drawImage(screen.src, (W - dw) / 2, (H - dh) / 2, dw, dh);
     }
 
-    const cam = this.camVideo;
-    if (this.camVisible && cam && cam.readyState >= 2 && cam.videoWidth > 0) {
-      this.drawCamera(cam);
+    const cam = this.camSource?.image();
+    if (this.camVisible && cam) this.drawCamera(cam);
+
+    if (this.previewCtx && document.visibilityState === 'visible') {
+      this.previewCtx.drawImage(this.composite, 0, 0);
     }
+    this.pushFrame();
+  }
+
+  /** Track pipeline: hand the finished frame to the recorder. */
+  private pushFrame() {
+    const writer = this.frameWriter;
+    if (!writer || this.writingFrame || this.recorder?.state !== 'recording') return;
+    let frame: VideoFrame;
+    try {
+      frame = new VideoFrame(this.composite, { timestamp: Math.round(performance.now() * 1000) });
+    } catch {
+      return;
+    }
+    this.writingFrame = true;
+    writer
+      .write(frame)
+      .catch(() => undefined)
+      .finally(() => {
+        frame.close();
+        this.writingFrame = false;
+      });
   }
 
   private currentOverlay(): Overlay {
@@ -244,7 +397,7 @@ export class Session {
     return { x: from.x + (to.x - from.x) * e, y: from.y + (to.y - from.y) * e, w: from.w + (to.w - from.w) * e };
   }
 
-  private drawCamera(cam: HTMLVideoElement) {
+  private drawCamera(cam: { src: CanvasImageSource; w: number; h: number }) {
     const { ctx, width: W, height: H } = this;
     const o = this.currentOverlay();
     const ow = o.w * W;
@@ -265,15 +418,15 @@ export class Session {
     ctx.save();
     roundRectPath(ctx, ox, oy, ow, oh, radius);
     ctx.clip();
-    const cw = cam.videoWidth;
-    const ch = cam.videoHeight;
+    const cw = cam.w;
+    const ch = cam.h;
     const scale = Math.max(ow / cw, oh / ch);
     const dw = cw * scale;
     const dh = ch * scale;
     // Mirror like a selfie view.
     ctx.translate(ox + ow, oy);
     ctx.scale(-1, 1);
-    ctx.drawImage(cam, (ow - dw) / 2, (oh - dh) / 2, dw, dh);
+    ctx.drawImage(cam.src, (ow - dw) / 2, (oh - dh) / 2, dw, dh);
     ctx.restore();
 
     ctx.save();
@@ -324,12 +477,15 @@ export class Session {
             return { ok: false, reason: 'error' };
           }
           this.camStream = stream;
-          const video = hiddenVideo(stream);
-          this.camVideo = video;
-          await waitForMetadata(video);
-          const settings = stream.getVideoTracks()[0]?.getSettings();
+          const camTrack = stream.getVideoTracks()[0];
+          const source: FrameSource =
+            this.useTracks && camTrack ? new TrackFrames(camTrack) : new VideoElementFrames(stream);
+          this.camSource = source;
+          await source.ready();
+          const picture = source.image();
+          const settings = camTrack?.getSettings();
           let aspect = 16 / 9;
-          if (video.videoWidth > 0 && video.videoHeight > 0) aspect = video.videoWidth / video.videoHeight;
+          if (picture && picture.w > 0 && picture.h > 0) aspect = picture.w / picture.h;
           else if (settings?.width && settings.height) aspect = settings.width / settings.height;
           this.camAspect = aspect;
           return { ok: true, aspect };
@@ -437,7 +593,19 @@ export class Session {
     if (!mime) return 'mime';
     void this.audio?.resume().catch(() => undefined);
 
-    const track = this.canvas.captureStream(30).getVideoTracks()[0];
+    let track: MediaStreamTrack | undefined;
+    if (this.useTracks) {
+      try {
+        const generator = new MediaStreamTrackGenerator({ kind: 'video' });
+        this.generator = generator;
+        this.frameWriter = generator.writable.getWriter();
+        track = generator;
+      } catch {
+        track = undefined;
+      }
+    }
+    // Firefox (or if the generator isn't available): let the browser take frames from the canvas.
+    if (!track) track = this.canvas.captureStream(30).getVideoTracks()[0];
     if (!track) return 'error';
     const output = new MediaStream([track, ...(this.dest ? this.dest.stream.getAudioTracks() : [])]);
 
@@ -567,15 +735,13 @@ export class Session {
     this.recordTrack?.stop();
     if (this.audio && this.audio.state !== 'closed') void this.audio.close().catch(() => undefined);
 
-    for (const video of [this.screenVideo, this.camVideo]) {
-      if (!video) continue;
-      video.pause();
-      video.srcObject = null;
-      video.remove();
-    }
+    this.screenSource.stop();
+    this.camSource?.stop();
+    if (this.frameWriter) void this.frameWriter.close().catch(() => undefined);
+    this.generator?.stop();
     this.canvas.remove();
     this.camStream = null;
     this.micStream = null;
-    this.camVideo = null;
+    this.camSource = null;
   }
 }
